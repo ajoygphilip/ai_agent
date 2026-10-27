@@ -52,13 +52,15 @@ class BedrockClient:
                 if msg.content:  # Bedrock rejects empty text blocks
                     blocks.append({"text": msg.content})
                 for tc in msg.tool_calls:
-                    blocks.append({
-                        "toolUse": {
-                            "toolUseId": tc.tool_call_id,
-                            "name": tc.name,
-                            "input": tc.arguments,
+                    blocks.append(
+                        {
+                            "toolUse": {
+                                "toolUseId": tc.tool_call_id,
+                                "name": tc.name,
+                                "input": tc.arguments,
+                            }
                         }
-                    })
+                    )
                 items.append({"role": msg.role.value, "content": blocks})
 
         return system, items
