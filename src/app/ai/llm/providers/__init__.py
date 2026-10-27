@@ -1,5 +1,5 @@
-from .bedrock.factory import build_bedrock_client
+from .factory import provider_factory
 
 __all__ = [
-    "build_bedrock_client",
+    "provider_factory",
 ]

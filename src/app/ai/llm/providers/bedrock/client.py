@@ -1,8 +1,17 @@
+from __future__ import annotations
 import asyncio
 from typing import Any
 import json
 import uuid
-
+import boto3
+from botocore.client import BaseClient
+from botocore.exceptions import (
+    ClientError,
+    ReadTimeoutError,
+    ConnectTimeoutError,
+    EndpointConnectionError,
+)
+from botocore.config import Config
 from ...models import (
     ChatMessage,
     Request,
@@ -10,16 +19,52 @@ from ...models import (
     ChatRole,
     GenerationConfig,
     Usage,
-    Tool,
     ToolCall,
 )
+from ...exceptions import *
+
+RETRYABLE = {
+    "InternalServerException",
+    "ServiceUnavailableException",
+    "ModelNotReadyException",
+}
+BEDROCK_ERROR_MAP = {
+    "AccessDeniedException": InvalidLLMProviderException,
+    "ValidationException": InvalidRequest,
+    "ResourceNotFoundException": InvalidLLMProviderException,
+    "ThrottlingException": RateLimited,
+    "ModelTimeoutException": LLMTimeout,
+    "InternalServerException": ProviderUnavailable,
+    "ServiceUnavailableException": ProviderUnavailable,
+    "ModelNotReadyException": ProviderUnavailable,
+    "ModelErrorException": ProviderUnavailable,
+}
 
 
 class BedrockClient:
     provider = "bedrock"
 
-    def __init__(self, client: Any) -> None:
+    def __init__(self, client: BaseClient) -> None:
         self._client = client
+
+    @classmethod
+    def from_settings(cls, settings) -> BedrockClient:
+        print(settings)
+        cfg = Config(
+            region_name=settings.AWS_REGION,
+            retries={"mode": "adaptive", "max_attempts": 4},
+            # connect_timeout=5,
+            read_timeout=120,
+            max_pool_connections=50,
+        )
+
+        client = boto3.client(
+            "bedrock-runtime",
+            config=cfg,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        )
+        return cls(client)
 
     @staticmethod
     def _to_provider_messages(
@@ -140,5 +185,17 @@ class BedrockClient:
             kwargs["inferenceConfig"] = inference_config
 
         # boto3 is synchronous; keep it off the event loop
-        response = await asyncio.to_thread(self._client.converse, **kwargs)
+        try:
+            response = await asyncio.to_thread(self._client.converse, **kwargs)
+        except ClientError as e:
+            code = e.response.get("Error", {}).get("Code", "")
+            exception_class = BEDROCK_ERROR_MAP.get(code, LLMException)
+            raise exception_class(str(e)) from e
+        except (ReadTimeoutError, ConnectTimeoutError) as e:
+            raise LLMTimeout(str(e)) from e
+        except EndpointConnectionError as e:
+            raise ProviderUnavailable(str(e)) from e
+        except Exception as e:
+            raise LLMException(str(e)) from e
+
         return self._to_chat_response(response, request.model)

@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     )
     AWS_REGION: str = "us-west-2"
 
-    BEDROCK_AWS_ACCESS_KEY_ID: str | None = None
-    BEDROCK_AWS_SECRET_ACCESS_KEY: str | None = None
+    AWS_ACCESS_KEY_ID: str | None = None
+    AWS_SECRET_ACCESS_KEY: str | None = None
 
     bedrock_default_model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
 
