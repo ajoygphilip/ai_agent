@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Literal, Protocol, AsyncIterator, Callable, Any
 from enum import StrEnum
+from typing import Any, AsyncIterator, Callable, Literal, Protocol
+
+from pydantic import BaseModel, Field
 
 
 class ChatRole(StrEnum):
@@ -71,7 +72,7 @@ class Response(BaseModel):
         )
 
 
-class ChatModel(Protocol):
+class LLMClient(Protocol):
     async def generate(self, request: Request) -> Response: ...
 
 
@@ -83,5 +84,5 @@ __all__ = [
     "GenerationConfig",
     "Tool",
     "Request",
-    "ChatModel",
+    "LLMClient",
 ]

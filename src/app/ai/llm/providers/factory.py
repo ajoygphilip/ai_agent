@@ -1,10 +1,11 @@
 import boto3
 from config import settings
-from ..models import ChatModel
+
 from ..exceptions import InvalidLLMProviderException
+from ..models import LLMClient
 
 
-def provider_factory(provider: str) -> ChatModel:
+def provider_factory(provider: str) -> LLMClient:
     match provider:
         case "bedrock":
             from .bedrock.client import BedrockClient

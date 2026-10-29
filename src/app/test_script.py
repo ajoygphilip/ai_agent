@@ -1,19 +1,19 @@
 import asyncio
+import inspect
 import json
-import sys
 from pprint import pprint
 
 from ai.llm.models import (
     ChatMessage,
-    Request,
     ChatRole,
     GenerationConfig,
-    ToolResult,
+    Request,
+    Response,
     Tool,
     ToolCall,
-    Response,
+    ToolResult,
 )
-import inspect
+from ai.llm.observability import LLMTracer
 from ai.llm.providers import provider_factory
 from ai.llm.tools import weather_tool
 
@@ -72,7 +72,7 @@ async def run_with_tools(client, request: Request, max_turns: int = 5) -> Respon
 
 
 async def main():
-    client = provider_factory("bedrock")
+    client = LLMTracer(provider_factory("bedrock"))
 
     request = Request(
         model="amazon.nova-lite-v1:0",
