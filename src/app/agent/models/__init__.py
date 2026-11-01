@@ -78,7 +78,7 @@ class AIAgent:
                 raise TimeoutError("Agent exceeded deadline budget.")
 
             async with asyncio.timeout(remaining_time):
-                step_req = request.model_copy(deep=True,update={"messages": messages, "tools": tools,})
+                step_req = request
                 response = await client.generate(step_req)
 
             if response.usage:
@@ -107,16 +107,7 @@ class AIAgent:
     def _build_llm_request(cls,messages:list[ChatMessage],tools:list[Tool])->Request:
         request = Request(
                 model="amazon.nova-lite-v1:0",
-                messages=[
-                    ChatMessage(
-                        role=ChatRole.SYSTEM,
-                        content="You are a concise, helpful assistant.",
-                    ),
-                    ChatMessage(
-                        role=ChatRole.USER,
-                        content="Tell me a joke",
-                    ),
-                ],
+                messages=messages,
                 tools=tools,
             )
         return request
