@@ -46,10 +46,11 @@ class BedrockClient:
 
     def __init__(self, client: BaseClient) -> None:
         self._client = client
+        self._config = GenerationConfig(temperature=0.5,max_tokens=300)
 
     @classmethod
     def from_settings(cls, settings) -> BedrockClient:
-        print(settings)
+        # print(settings)
         cfg = Config(
             region_name=settings.AWS_REGION,
             retries={"mode": "adaptive", "max_attempts": 4},
@@ -180,7 +181,7 @@ class BedrockClient:
         if tool_config:
             kwargs["toolConfig"] = tool_config
 
-        inference_config = self._to_inference_config(request.config)
+        inference_config = self._to_inference_config(self._config)
         if inference_config:
             kwargs["inferenceConfig"] = inference_config
 

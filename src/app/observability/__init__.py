@@ -5,7 +5,8 @@ from contextlib import asynccontextmanager
 
 
 def emit(record: dict) -> None:
-    print("emitting", json.dumps(record, default=str))
+    # print("emitting", json.dumps(record, default=str))
+    pass
 
 
 @asynccontextmanager

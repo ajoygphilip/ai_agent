@@ -8,7 +8,7 @@ class LLMTracer:
         self.inner, self.name = inner, name
 
     async def generate(self, request: Request, **kw) -> Response:
-        async with span(self.name, n_messages=len(request.messages)) as rec:
+        async with span(self.name, n_messages=len(request.messages)) as rec: # pyright: ignore[reportCallIssue]
             resp = await self.inner.generate(request, **kw)
             in_tokens = 0
             out_tokens = 0

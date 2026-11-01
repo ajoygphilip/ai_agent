@@ -16,6 +16,7 @@ from ai.llm.models import (
 from ai.llm.observability import LLMTracer
 from ai.llm.providers import provider_factory
 from ai.llm.tools import weather_tool
+from agent.models import AIAgent,Budget,ChatSession
 
 
 async def execute_tool(tools: dict[str, Tool], call: ToolCall) -> ToolResult:
@@ -73,44 +74,16 @@ async def run_with_tools(client, request: Request, max_turns: int = 5) -> Respon
 
 async def main():
     client = LLMTracer(provider_factory("bedrock"))
-
-    request = Request(
-        model="amazon.nova-lite-v1:0",
-        messages=[
-            ChatMessage(
-                role=ChatRole.SYSTEM,
-                content="You are a concise, helpful assistant.",
-            ),
-            ChatMessage(
-                role=ChatRole.USER,
-                content="What is the weather at trivandrum in celcius",
-            ),
-        ],
-        tools=[weather_tool],
-        config=GenerationConfig(
-            temperature=0.2,
-            max_tokens=300,
-        ),
-    )
-
-    print(f"Model: {request.model}")
-    print("Sending request...\n")
+    budget = Budget()
+    tools=[weather_tool]
+    agent = AIAgent(tools=tools)
+    config=GenerationConfig(temperature=0.5,max_tokens=300)
 
     try:
-        response = await run_with_tools(client, request)
-
-        print("Response")
-        print("-" * 60)
-        print("Provider:", response.provider)
-        print("Model:", response.model)
-        print("Finish reason:", response.finish_reason)
-        print("Usage:")
-        pprint(response.usage.model_dump() if response.usage else None)
-        print("\nText:")
-        print(response.text)
-
-        for call in response.tool_calls:
-            print(call)
+        session = ChatSession(agent=agent,budget=budget)
+        respone = await session.chat(client=client,user_text="What is the weather in Trivandrum")
+        print(respone)
+       
 
     except Exception as exc:
         print(f"Request failed: {type(exc).__name__}: {exc}")
