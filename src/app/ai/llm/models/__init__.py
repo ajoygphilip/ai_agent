@@ -15,7 +15,7 @@ class Usage(BaseModel):
     input_tokens: int = 0
     output_tokens: int = 0
 
-    def __add__(self, other:Usage):
+    def __add__(self, other: Usage):
         if not isinstance(other, Usage):
             return NotImplemented
 

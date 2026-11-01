@@ -46,7 +46,7 @@ class BedrockClient:
 
     def __init__(self, client: BaseClient) -> None:
         self._client = client
-        self._config = GenerationConfig(temperature=0.5,max_tokens=300)
+        self._config = GenerationConfig(temperature=0.5, max_tokens=300)
 
     @classmethod
     def from_settings(cls, settings) -> BedrockClient:
