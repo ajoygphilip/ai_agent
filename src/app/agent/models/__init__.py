@@ -9,6 +9,7 @@ from ai.llm.models import (
     ChatMessage,
     ChatRole,
     Usage,
+    GenerationConfig
 )
 import asyncio
 import json
@@ -80,13 +81,14 @@ class AIAgent:
         client: LLMClient,
         messages: list[ChatMessage] | None,
         budget: Budget,
+        config: GenerationConfig|None,
         max_turns: int = 5,
     ) -> AgentResult:
         start_time = time.monotonic()
         messages = messages or []
         tools = self.executor.tools
         total_usage = Usage()
-        request = self._build_llm_request(messages, self.executor.tools)
+        request = self._build_llm_request(messages, self.executor.tools,config=config)
 
         for step in range(1, max_turns + 1):
             elapsed = time.monotonic() - start_time
@@ -122,12 +124,13 @@ class AIAgent:
 
     @classmethod
     def _build_llm_request(
-        cls, messages: list[ChatMessage], tools: list[Tool]
+        cls, messages: list[ChatMessage], tools: list[Tool],config:GenerationConfig|None
     ) -> Request:
         request = Request(
             model="amazon.nova-lite-v1:0",
             messages=messages,
             tools=tools,
+            config=config
         )
         return request
 
@@ -149,11 +152,11 @@ class ChatSession:
                 ChatMessage(role=ChatRole.SYSTEM, content=system_prompt)
             )
 
-    async def chat(self, user_text: str, client: LLMClient) -> str:
+    async def chat(self, user_text: str, client: LLMClient,config:GenerationConfig|None=None) -> str:
         user_msg = ChatMessage(role=ChatRole.USER, content=user_text)
         self.history.append(user_msg)
         result: AgentResult = await self.agent.run(
-            client=client, messages=self.history, budget=self.budget
+            client=client, messages=self.history, budget=self.budget,config=config
         )
         assistant_msg = result.response.to_message()
         self.history.append(assistant_msg)

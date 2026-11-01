@@ -62,7 +62,7 @@ class Request(BaseModel):
     messages: list[ChatMessage]
     model: str
     tools: list[Tool] = Field(default_factory=list)
-
+    config: GenerationConfig|None = None
 
 class Response(BaseModel):
     text: str

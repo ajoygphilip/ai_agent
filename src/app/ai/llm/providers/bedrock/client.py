@@ -112,7 +112,7 @@ class BedrockClient:
         return system, items
 
     @staticmethod
-    def _to_inference_config(config: GenerationConfig) -> dict:
+    def _to_provider_config(config: GenerationConfig) -> dict:
         mapping = {"temperature": config.temperature, "maxTokens": config.max_tokens}
         return {k: v for k, v in mapping.items() if v is not None}
 
@@ -181,7 +181,7 @@ class BedrockClient:
         if tool_config:
             kwargs["toolConfig"] = tool_config
 
-        inference_config = self._to_inference_config(self._config)
+        inference_config = self._to_provider_config(request.config or self._config)
         if inference_config:
             kwargs["inferenceConfig"] = inference_config
 
