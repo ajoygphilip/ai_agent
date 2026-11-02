@@ -88,7 +88,6 @@ class AIAgent:
         messages = messages or []
         tools = self.executor.tools
         total_usage = Usage()
-        request = self._build_llm_request(messages, self.executor.tools,config=config)
 
         for step in range(1, max_turns + 1):
             elapsed = time.monotonic() - start_time
@@ -97,8 +96,8 @@ class AIAgent:
                 raise TimeoutError("Agent exceeded deadline budget.")
 
             async with asyncio.timeout(remaining_time):
-                step_req = request
-                response = await client.generate(step_req)
+                request = self._build_llm_request(messages, self.executor.tools,config=config)
+                response = await client.generate(request)
 
             if response.usage:
                 total_usage += response.usage
