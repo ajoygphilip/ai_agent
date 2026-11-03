@@ -1,10 +1,10 @@
 from pydantic import BaseModel, ConfigDict, Field
-from ai.llm.models import (
+from app.ai.llm.models import (
     Request,
     Response,
     Usage
 )
-from ai.llm.observability import LLMTracer
+from app.ai.llm.observability import LLMTracer
 from typing import Any, Protocol
 
 

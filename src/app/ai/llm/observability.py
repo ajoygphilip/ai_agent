@@ -1,4 +1,4 @@
-from observability import span
+from app.observability import span
 
 from .models import LLMClient, Request, Response
 
