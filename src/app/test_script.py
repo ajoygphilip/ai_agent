@@ -16,7 +16,9 @@ from ai.llm.models import (
 from ai.llm.observability import LLMTracer
 from ai.llm.providers import provider_factory
 from ai.llm.tools import weather_tool
-from agent.models import AIAgent, Budget, ChatSession
+from app.ai.agent.models import Budget
+from app.ai.agent.models.AIAgent import AIAgent
+from app.ai.agent.models.ChatSession import ChatSession
 
 
 async def execute_tool(tools: dict[str, Tool], call: ToolCall) -> ToolResult:

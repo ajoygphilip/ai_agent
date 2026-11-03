@@ -1,5 +1,5 @@
-from agent.models import AgentResult, Budget
-from agent.models.AIAgent import AIAgent
+from app.ai.agent.models import AgentResult, Budget
+from app.ai.agent.models.AIAgent import AIAgent
 from ai.llm.models import ChatMessage, ChatRole, GenerationConfig, LLMClient
 
 
