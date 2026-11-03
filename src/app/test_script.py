@@ -17,8 +17,8 @@ from ai.llm.observability import LLMTracer
 from ai.llm.providers import provider_factory
 from ai.llm.tools import weather_tool
 from app.ai.agent.models import Budget
-from app.ai.agent.models.AIAgent import AIAgent
-from app.ai.agent.models.ChatSession import ChatSession
+from app.ai.agent.AIAgent import AIAgent
+from app.ai.agent.ChatSession import ChatSession
 
 
 async def execute_tool(tools: dict[str, Tool], call: ToolCall) -> ToolResult:
@@ -83,10 +83,14 @@ async def main():
 
     try:
         session = ChatSession(agent=agent, budget=budget)
-        respone = await session.chat(
-            client=client, user_text="What is the weather in Trivandrum"
+        agent_respone = await session.chat(
+            client=client, user_text="My name is ajoy",config=config
         )
-        print(respone)
+        print(agent_respone)
+        agent_respone = await session.chat(
+            client=client, user_text="What is my name",config=config
+        )
+        print(agent_respone)
 
     except Exception as exc:
         print(f"Request failed: {type(exc).__name__}: {exc}")
