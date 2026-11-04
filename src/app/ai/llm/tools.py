@@ -1,35 +1,60 @@
-from .models import Tool
+import inspect
+from typing import Callable
 
 
-def get_weather(location: str, unit: str = "celsius") -> dict:
-    """Return mock weather data for a location."""
+def get_function_schema(func) -> dict:
+    type_map = {
+        str: "string",
+        int: "integer",
+        float: "number",
+        bool: "boolean",
+        list: "array",
+        dict: "object",
+        type(None): "null",
+    }
+    try:
+        signature = inspect.signature(func)  # type: ignore
+    except Exception as e:
+        raise ValueError(f"Unable to convert ")
+
+    params = {}
+    required = []
+    for param in signature.parameters.values():
+        try:
+            param_type = type_map[param.annotation]
+            params[param.name] = {"type": param_type}
+
+            if param.default == inspect._empty:
+                required.append(param.name)
+
+        except KeyError as e:
+            raise KeyError(
+                f"Unsupported type annotation {param.annotation} for param {param.name}"
+            ) from e
+
     return {
-        "location": location,
-        "temperature": 28,
-        "unit": unit,
-        "condition": "partly cloudy",
+        "type": "object",
+        "params": params,
+        "required": required,
     }
 
 
-weather_tool = Tool(
-    name="get_weather",
-    description="Get the current weather for a given location.",
-    input_schema={
-        "type": "object",
-        "properties": {
-            "location": {
-                "type": "string",
-                "description": "The city or location to check.",
-            },
-            "unit": {
-                "type": "string",
-                "enum": ["celsius", "fahrenheit"],
-                "description": "Temperature unit.",
-            },
+def format_tool_definition(name: str, description: str, input_schema: dict,handler:Callable) -> dict:
+    return {
+        "type": "function",
+        "function": {
+            "name": name,
+            "description": description,
+            "input_schema": input_schema,
+            "handler":handler
         },
-        "required": ["location"],
-        "additionalProperties": False,
-    },
-    handler=get_weather,
-    metadata={"category": "weather"},
-)
+    }
+
+
+def function_to_tool(func) -> dict:
+    return format_tool_definition(
+        func.__name__, func.__doc__ or "", get_function_schema(func),func
+    )
+
+
+

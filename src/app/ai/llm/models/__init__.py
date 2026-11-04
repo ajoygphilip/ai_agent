@@ -2,6 +2,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any, AsyncIterator, Callable, Literal, Protocol
 from pydantic import BaseModel, Field
+from app.ai.llm.tools import function_to_tool
 
 
 class ChatRole(StrEnum):
@@ -37,6 +38,11 @@ class Tool(BaseModel):
     handler: Callable = Field(exclude=True)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+    @classmethod
+    def from_function(cls,func:Callable)->Tool:
+        func_def = function_to_tool(func)
+        return cls.model_validate(func_def.get("function"))
+
 
 class ToolCall(BaseModel):
     name: str
@@ -62,7 +68,8 @@ class Request(BaseModel):
     messages: list[ChatMessage]
     model: str
     tools: list[Tool] = Field(default_factory=list)
-    config: GenerationConfig|None = None
+    config: GenerationConfig | None = None
+
 
 class Response(BaseModel):
     text: str
