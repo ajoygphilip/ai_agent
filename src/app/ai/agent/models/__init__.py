@@ -1,9 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-from app.ai.llm.models import (
-    Request,
-    Response,
-    Usage
-)
+from app.ai.llm.models import Request, Response, Usage
 from app.ai.llm.observability import LLMTracer
 from typing import Any, Protocol
 
@@ -23,4 +19,3 @@ class AgentResult(BaseModel):
 
 class BaseAgent:
     async def run(self, request: Request, max_turns: int = 5) -> AgentResult: ...
-

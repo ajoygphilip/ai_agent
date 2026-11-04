@@ -1,5 +1,5 @@
 from app.ai.agent.models import AgentResult, Budget
-from app.ai.agent.AIAgent import AIAgent
+from app.ai.agent.agent import AIAgent
 from app.ai.llm.models import ChatMessage, ChatRole, GenerationConfig, LLMClient
 
 
@@ -20,11 +20,13 @@ class ChatSession:
                 ChatMessage(role=ChatRole.SYSTEM, content=system_prompt)
             )
 
-    async def chat(self, user_text: str, client: LLMClient,config:GenerationConfig|None=None) -> str:
+    async def chat(
+        self, user_text: str, client: LLMClient, config: GenerationConfig | None = None
+    ) -> str:
         user_msg = ChatMessage(role=ChatRole.USER, content=user_text)
         self.history.append(user_msg)
         result: AgentResult = await self.agent.run(
-            client=client, messages=self.history, budget=self.budget,config=config
+            client=client, messages=self.history, budget=self.budget, config=config
         )
         assistant_msg = result.response.to_message()
         self.history.append(assistant_msg)

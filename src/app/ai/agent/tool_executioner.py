@@ -16,6 +16,8 @@ class ToolExecutor:
         return list(self._tools.values())
 
     async def execute(self, call: ToolCall) -> ToolResult:
+        # print(call,"\n")
+
         tool = self._tools.get(call.name)
         if not tool:
             return ToolResult(

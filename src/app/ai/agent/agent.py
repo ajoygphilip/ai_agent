@@ -1,6 +1,15 @@
 from app.ai.agent.models import AgentResult, Budget
-from app.ai.agent.ToolExecutor import ToolExecutor
-from app.ai.llm.models import ChatMessage, ChatRole, GenerationConfig, LLMClient, Request,Response, Tool, Usage
+from app.ai.agent.tool_executioner import ToolExecutor
+from app.ai.llm.models import (
+    ChatMessage,
+    ChatRole,
+    GenerationConfig,
+    LLMClient,
+    Request,
+    Response,
+    Tool,
+    Usage,
+)
 
 
 import asyncio
@@ -16,12 +25,11 @@ class AIAgent:
         client: LLMClient,
         messages: list[ChatMessage] | None,
         budget: Budget,
-        config: GenerationConfig|None,
+        config: GenerationConfig | None,
         max_turns: int = 5,
     ) -> AgentResult:
         start_time = time.monotonic()
         messages = messages or []
-        tools = self.executor.tools
         total_usage = Usage()
 
         for step in range(1, max_turns + 1):
@@ -31,8 +39,10 @@ class AIAgent:
                 raise TimeoutError("Agent exceeded deadline budget.")
 
             async with asyncio.timeout(remaining_time):
-                request = self._build_llm_request(messages, self.executor.tools,config=config)
-                response = await self._think(request,client)
+                request = self._build_llm_request(
+                    messages, self.executor.tools, config=config
+                )
+                response = await self._think(request, client)
 
             if response.usage:
                 total_usage += response.usage
@@ -50,27 +60,29 @@ class AIAgent:
 
             messages.append(response.to_message())
             tool_results = await self._act(response)
-            messages.append(ChatMessage(role=ChatRole.TOOL, tool_results=list(tool_results)))
+            messages.append(
+                ChatMessage(role=ChatRole.TOOL, tool_results=list(tool_results))
+            )
 
         raise RuntimeError(f"Exceeded {max_turns} tool-use turns")
 
     async def _act(self, response):
         results = await asyncio.gather(
-                *(self.executor.execute(call) for call in response.tool_calls)
-            )
+            *(self.executor.execute(call) for call in response.tool_calls)
+        )
         return results
 
-    async def _think(self,request:Request,client:LLMClient)->Response:
+    async def _think(self, request: Request, client: LLMClient) -> Response:
         return await client.generate(request)
-    
+
     @classmethod
     def _build_llm_request(
-        cls, messages: list[ChatMessage], tools: list[Tool],config:GenerationConfig|None
+        cls,
+        messages: list[ChatMessage],
+        tools: list[Tool],
+        config: GenerationConfig | None,
     ) -> Request:
         request = Request(
-            model="amazon.nova-lite-v1:0",
-            messages=messages,
-            tools=tools,
-            config=config
+            model="amazon.nova-lite-v1:0", messages=messages, tools=tools, config=config
         )
         return request
