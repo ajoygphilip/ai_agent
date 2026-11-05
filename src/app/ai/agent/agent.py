@@ -25,6 +25,7 @@ class AIAgent:
         client: LLMClient,
         messages: list[ChatMessage] | None,
         budget: Budget,
+        model:str,
         config: GenerationConfig | None,
         max_turns: int = 5,
     ) -> AgentResult:
@@ -40,7 +41,7 @@ class AIAgent:
 
             async with asyncio.timeout(remaining_time):
                 request = self._build_llm_request(
-                    messages, self.executor.tools, config=config
+                    messages, self.executor.tools, config=config,model=model
                 )
                 response = await self._think(request, client)
 
@@ -80,9 +81,10 @@ class AIAgent:
         cls,
         messages: list[ChatMessage],
         tools: list[Tool],
+        model:str,
         config: GenerationConfig | None,
     ) -> Request:
         request = Request(
-            model="amazon.nova-lite-v1:0", messages=messages, tools=tools, config=config
+            model=model, messages=messages, tools=tools, config=config
         )
         return request

@@ -21,12 +21,12 @@ class ChatSession:
             )
 
     async def chat(
-        self, user_text: str, client: LLMClient, config: GenerationConfig | None = None
+        self, user_text: str, client: LLMClient, model:str,config: GenerationConfig | None = None,
     ) -> str:
         user_msg = ChatMessage(role=ChatRole.USER, content=user_text)
         self.history.append(user_msg)
         result: AgentResult = await self.agent.run(
-            client=client, messages=self.history, budget=self.budget, config=config
+            client=client, messages=self.history, budget=self.budget, config=config,model=model
         )
         assistant_msg = result.response.to_message()
         self.history.append(assistant_msg)
