@@ -31,10 +31,9 @@ def get_function_schema(func) -> dict:
             raise KeyError(
                 f"Unsupported type annotation {param.annotation} for param {param.name}"
             ) from e
-
     return {
         "type": "object",
-        "params": params,
+        "properties": params,
         "required": required,
     }
 
