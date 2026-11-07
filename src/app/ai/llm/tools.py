@@ -27,7 +27,7 @@ class BaseTool(ABC):
         try:
             return await self.execute(*args, **kwargs)
         except Exception as e:
-            raise ToolCallException from e
+            raise ToolCallException(str(e)) from e
 
     @property
     def name(self):
@@ -62,9 +62,9 @@ class FunctionTool(BaseTool):
             type(None): "null",
         }
         try:
-            signature = inspect.signature(func)  # type: ignore
+            signature = inspect.signature(func)
         except Exception as e:
-            raise ValueError(f"Unable to convert ")
+            raise ValueError(f"Unable to inspect signature for '{func.__name__}': {e}") from e
 
         params = {}
         required = []
