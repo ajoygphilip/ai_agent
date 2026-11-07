@@ -1,8 +1,8 @@
 from __future__ import annotations
 from enum import StrEnum
 from typing import Any, AsyncIterator, Callable, Literal, Protocol
-from pydantic import BaseModel, Field
-from app.ai.llm.tools import function_to_tool
+from pydantic import BaseModel, Field, ConfigDict
+from app.ai.llm.tools import FunctionTool as Tool
 
 
 class ChatRole(StrEnum):
@@ -31,19 +31,6 @@ class GenerationConfig(BaseModel):
     max_tokens: int | None = None
 
 
-class Tool(BaseModel):
-    name: str
-    description: str
-    input_schema: dict[str, Any]
-    handler: Callable = Field(exclude=True)
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-    @classmethod
-    def from_function(cls,func:Callable)->Tool:
-        func_def = function_to_tool(func)
-        return cls.model_validate(func_def.get("function"))
-
-
 class ToolCall(BaseModel):
     name: str
     arguments: Any
@@ -57,7 +44,7 @@ class ToolResult(BaseModel):
     is_error: bool = False
 
 
-class ChatMessage(BaseModel):
+class Message(BaseModel):
     role: ChatRole
     content: str | None = None
     tool_calls: list[ToolCall] = Field(default_factory=list)
@@ -65,7 +52,8 @@ class ChatMessage(BaseModel):
 
 
 class Request(BaseModel):
-    messages: list[ChatMessage]
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    messages: list[Message]
     model: str
     tools: list[Tool] = Field(default_factory=list)
     config: GenerationConfig | None = None
@@ -79,8 +67,8 @@ class Response(BaseModel):
     finish_reason: str | None = None
     tool_calls: list[ToolCall] = Field(default_factory=list)
 
-    def to_message(self) -> ChatMessage:
-        return ChatMessage(
+    def to_message(self) -> Message:
+        return Message(
             role=ChatRole.ASSISTANT,
             content=self.text,
             tool_calls=self.tool_calls,
@@ -89,15 +77,3 @@ class Response(BaseModel):
 
 class LLMClient(Protocol):
     async def generate(self, request: Request) -> Response: ...
-
-
-__all__ = [
-    "ChatRole",
-    "ChatMessage",
-    "Usage",
-    "Response",
-    "GenerationConfig",
-    "Tool",
-    "Request",
-    "LLMClient",
-]

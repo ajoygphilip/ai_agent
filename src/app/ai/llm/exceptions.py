@@ -18,5 +18,9 @@ class LLMTimeout(LLMException):
     pass
 
 
+class ToolCallException(LLMException):
+    pass
+
+
 class ProviderUnavailable(LLMException):
     pass

@@ -120,7 +120,7 @@ class BedrockClient:
         if not request.tools:
             return None
 
-        ret= {
+        ret = {
             "tools": [
                 {
                     "toolSpec": {
