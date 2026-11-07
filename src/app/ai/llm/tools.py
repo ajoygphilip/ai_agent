@@ -45,7 +45,7 @@ class BaseTool(ABC):
 class FunctionTool(BaseTool):
     async def execute(self, *args, **kwargs) -> Any:
         result = self.handler(*args, **kwargs)
-        if inspect.iscoroutine(result):
+        if inspect.isawaitable(result):
             return await result
         else:
             return result
