@@ -1,6 +1,6 @@
 from app.ai.llm.models import ToolCall, ToolResult
 from app.ai.llm.tools import FunctionTool as Tool
-
+from app.ai.llm.exceptions import ToolCallException
 import inspect
 import json
 
@@ -16,9 +16,11 @@ class ToolExecutor:
         return list(self._tools.values())
 
     async def execute(self, call: ToolCall) -> ToolResult:
-        # print(call,"\n")
 
         tool = self._tools.get(call.name)
+        err = None
+        output = None
+
         if not tool:
             return ToolResult(
                 name=call.name,
@@ -27,18 +29,34 @@ class ToolExecutor:
                 is_error=True,
             )
         try:
-            res = tool.handler(**call.arguments)
-            if inspect.isawaitable(res):
-                res = await res
+            print(tool)
+            res = await tool(**call.arguments)
+            print("res", res)
             output = res if isinstance(res, str) else json.dumps(res)
-            return ToolResult(
-                name=call.name, tool_call_id=call.tool_call_id, output=output
-            )
+        except ToolCallException as e:
+            err = e
+
         except Exception as e:
-            print(e)
-            return ToolResult(
-                name=call.name,
-                tool_call_id=call.tool_call_id,
-                output=f"{type(e).__name__}: {e}",
-                is_error=True,
-            )
+            err = e
+
+        finally:
+            if output:
+                return ToolResult(
+                    name=call.name, tool_call_id=call.tool_call_id, output=output
+                )
+
+            elif err:
+                return ToolResult(
+                    name=call.name,
+                    tool_call_id=call.tool_call_id,
+                    output=f"{type(err).__name__}: {err}",
+                    is_error=True,
+                )
+
+            else:
+                return ToolResult(
+                    name=call.name,
+                    tool_call_id=call.tool_call_id,
+                    output=f"{type(err).__name__}: {err}",
+                    is_error=True,
+                )
