@@ -1,5 +1,5 @@
-from app.ai.llm.models import Tool, ToolCall, ToolResult
-
+from app.ai.llm.models import ToolCall, ToolResult
+from app.ai.llm.tools import FunctionTool as Tool
 
 import inspect
 import json
@@ -34,10 +34,11 @@ class ToolExecutor:
             return ToolResult(
                 name=call.name, tool_call_id=call.tool_call_id, output=output
             )
-        except Exception as exc:
+        except Exception as e:
+            print(e)
             return ToolResult(
                 name=call.name,
                 tool_call_id=call.tool_call_id,
-                output=f"{type(exc).__name__}: {exc}",
+                output=f"{type(e).__name__}: {e}",
                 is_error=True,
             )

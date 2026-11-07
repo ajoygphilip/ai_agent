@@ -1,59 +1,102 @@
+from __future__ import annotations
 import inspect
-from typing import Callable
+from typing import Callable,Any
+from abc import ABC,abstractmethod
+import inspect
 
+class BaseTool(ABC):
 
-def get_function_schema(func) -> dict:
-    type_map = {
-        str: "string",
-        int: "integer",
-        float: "number",
-        bool: "boolean",
-        list: "array",
-        dict: "object",
-        type(None): "null",
-    }
-    try:
-        signature = inspect.signature(func)  # type: ignore
-    except Exception as e:
-        raise ValueError(f"Unable to convert ")
+    def __init__(self,func:dict) -> None:
+        self._description = func.get("description")
+        self._name = func.get("name")
+        self.handler = func.get("handler")
+        self._input_schema = func.get("input_schema")
 
-    params = {}
-    required = []
-    for param in signature.parameters.values():
+    @abstractmethod
+    async def execute(self,*args,**kwargs)->Any:
+        pass
+
+    async def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return await self.execute(*args,**kwargs)
+
+    @property
+    def name(self):
+        return self._name
+    
+    @property
+    def description(self):
+        return self._description
+    
+    @property
+    def input_schema(self):
+        return self._input_schema
+        
+   
+    
+    @staticmethod
+    def get_function_schema(func) -> dict:
+        type_map = {
+            str: "string",
+            int: "integer",
+            float: "number",
+            bool: "boolean",
+            list: "array",
+            dict: "object",
+            type(None): "null",
+        }
         try:
-            param_type = type_map[param.annotation]
-            params[param.name] = {"type": param_type}
+            signature = inspect.signature(func)  # type: ignore
+        except Exception as e:
+            raise ValueError(f"Unable to convert ")
 
-            if param.default == inspect._empty:
-                required.append(param.name)
+        params = {}
+        required = []
+        for param in signature.parameters.values():
+            try:
+                param_type = type_map[param.annotation]
+                params[param.name] = {"type": param_type}
 
-        except KeyError as e:
-            raise KeyError(
-                f"Unsupported type annotation {param.annotation} for param {param.name}"
-            ) from e
-    return {
-        "type": "object",
-        "properties": params,
-        "required": required,
-    }
+                if param.default == inspect._empty:
+                    required.append(param.name)
+
+            except KeyError as e:
+                raise KeyError(
+                    f"Unsupported type annotation {param.annotation} for param {param.name}"
+                ) from e
+        return {
+            "type": "object",
+            "properties": params,
+            "required": required,
+        }
+
+    @classmethod
+    def function_to_tool(cls,func) -> dict:
+        return {
+                    "type": "function",
+                    "function": {
+                        "name": func.__name__,
+                        "description": func.__doc__ or "",
+                        "input_schema": cls.get_function_schema(func),
+                        "handler":func
+                    },
+                }
 
 
-def format_tool_definition(name: str, description: str, input_schema: dict,handler:Callable) -> dict:
-    return {
-        "type": "function",
-        "function": {
-            "name": name,
-            "description": description,
-            "input_schema": input_schema,
-            "handler":handler
-        },
-    }
+class FunctionTool(BaseTool):
+    async def execute(self,*args,**kwargs)->Any:
+        result =  await self.execute(*args,**kwargs)
+        if inspect.iscoroutine(result):
+            return await result
+        else:
+            return result
+        
+    @classmethod
+    def from_function(cls,func:Callable)->BaseTool:
+        func_def = cls.function_to_tool(func).get("function")
+        if not func_def:
+            raise RuntimeError("Tool creation failed")
+        return cls(func_def)
 
-
-def function_to_tool(func) -> dict:
-    return format_tool_definition(
-        func.__name__, func.__doc__ or "", get_function_schema(func),func
-    )
-
-
-
+def tool(func:Callable):
+    if func:
+        return FunctionTool.from_function(func)

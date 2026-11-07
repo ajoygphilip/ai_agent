@@ -13,7 +13,7 @@ from botocore.exceptions import (
 )
 from botocore.config import Config
 from ...models import (
-    ChatMessage,
+    Message,
     Request,
     Response,
     ChatRole,
@@ -69,7 +69,7 @@ class BedrockClient:
 
     @staticmethod
     def _to_provider_messages(
-        messages: list[ChatMessage],
+        messages: list[Message],
     ) -> tuple[list[dict], list[dict]]:
         system: list[dict] = []
         items: list[dict] = []
@@ -120,7 +120,7 @@ class BedrockClient:
         if not request.tools:
             return None
 
-        return {
+        ret= {
             "tools": [
                 {
                     "toolSpec": {
@@ -132,6 +132,7 @@ class BedrockClient:
                 for tool in request.tools
             ]
         }
+        return ret
 
     def _to_chat_response(self, raw_response: dict, model: str) -> Response:
         # print(raw_response)
