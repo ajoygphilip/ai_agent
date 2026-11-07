@@ -2,7 +2,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any, AsyncIterator, Callable, Literal, Protocol
 from pydantic import BaseModel, Field, ConfigDict
-from app.ai.llm.tools import FunctionTool as Tool
+from app.ai.llm.tools import BaseTool as Tool
 
 
 class ChatRole(StrEnum):
