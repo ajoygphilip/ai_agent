@@ -64,11 +64,11 @@ class FunctionTool(BaseTool):
     async def execute(self, *args, **kwargs) -> Any:
         try:
             if self.model:
-                input = self.model(*args,**kwargs).model_dump()
+                input = self.model(**kwargs).model_dump()
+                result = self.handler(**input)
             else:
-                input = kwargs
+                result = self.handler(**kwargs)
 
-            result = self.handler(input)
             if inspect.isawaitable(result):
                 return await result
             else:
