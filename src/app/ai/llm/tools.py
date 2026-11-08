@@ -5,8 +5,7 @@ from abc import ABC, abstractmethod
 import inspect
 from app.ai.exceptions import ToolCallException
 from app.ai.models import ToolSpec
-from pydantic import create_model
-
+from pydantic import create_model,ValidationError,BaseModel
 class BaseTool(ABC):
     def __init__(
         self,
@@ -55,15 +54,30 @@ class BaseTool(ABC):
         return [t.spec for t in tools]
 
 class FunctionTool(BaseTool):
+
+    def __init__(self, handler: Callable[..., Any], name: str, description: str = "", input_schema: dict | None = None,**kwargs) -> None:
+        super().__init__(handler, name, description, input_schema)
+        self.model:type[BaseModel]|None =kwargs.get("model")
+
+  
     async def execute(self, *args, **kwargs) -> Any:
-        result = self.handler(*args, **kwargs)
-        if inspect.isawaitable(result):
-            return await result
-        else:
-            return result
+        try:
+            if self.model:
+                input = self.model(*args,**kwargs).model_dump()
+            else:
+                input = kwargs
+
+            result = self.handler(input)
+            if inspect.isawaitable(result):
+                return await result
+            else:
+                return result
+        except ValidationError as e:
+            return f"Invalid tool arguments: {e.errors()}"
+        
 
     @staticmethod
-    def get_function_schema(func) -> dict:
+    def get_function_fields(func) -> dict:
         sig = inspect.signature(func)
         fields = {
             param.name: (
@@ -72,18 +86,22 @@ class FunctionTool(BaseTool):
             )
             for param in sig.parameters.values()
         }
-        model = create_model(f"{func.__name__}_args", **fields)  # type: ignore
-        return model.model_json_schema()
+       
+        return fields
     
     @classmethod
     def function_to_tool(cls, func) -> dict:
+        fields = cls.get_function_fields(func)
+        model = create_model(f"{func.__name__}_args", **fields)  # type: ignore
+
         return {
             "type": "function",
             "function": {
                 "name": func.__name__,
                 "description": func.__doc__ or "",
-                "input_schema": cls.get_function_schema(func),
+                "input_schema": model.model_json_schema(), # type: ignore
                 "handler": func,
+                "validator":model,
             },
         }
 
