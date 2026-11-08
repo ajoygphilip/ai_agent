@@ -27,7 +27,6 @@ class BaseTool(ABC):
         try:
             return await self.execute(*args, **kwargs)
         except Exception as e:
-            print(e)
             raise ToolCallException(str(e)) from e
 
     @property
@@ -74,7 +73,7 @@ class FunctionTool(BaseTool):
             else:
                 return result
         except ValidationError as e:
-            return f"Invalid tool arguments: {e.errors()}"
+            raise ToolCallException(f"Invalid tool arguments: {e.errors()}") from e
         
 
     @staticmethod
