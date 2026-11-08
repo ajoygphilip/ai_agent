@@ -19,16 +19,17 @@ import time
 class AIAgent:
     name = "general_agent"
 
-    def __init__(self, tools: list[Tool] | None = None):
+    def __init__(self, client: LLMClient,model: str,tools: list[Tool] | None = None,config: GenerationConfig | None = None):
+        self.client= client
         self.executor = ToolExecutor(tools or [])
+        self.tools = tools
+        self.model= model
+        self.config=config
 
     async def run(
         self,
-        client: LLMClient,
         events: list[Event] | None,
         budget: Budget,
-        model: str,
-        config: GenerationConfig | None,
         max_turns: int = 5,
     ) -> AgentResult:
         start_time = time.monotonic()
@@ -43,9 +44,9 @@ class AIAgent:
 
             async with asyncio.timeout(remaining_time):
                 request = self._build_llm_request(
-                    self.events_to_messages(events), self.executor.tools, config=config, model=model
+                    self.events_to_messages(events), self.executor.tools, config=self.config, model=self.model
                 )
-                response = await self._think(request, client)
+                response = await self._think(request, self.client)
 
             if response.usage:
                 total_usage += response.usage

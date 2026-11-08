@@ -32,16 +32,14 @@ async def main():
     client = LLMTracer(provider_factory("bedrock"))
     budget = Budget()
     tools = [get_weather]
-    agent = AIAgent(tools=tools)  # type: ignore
     config = GenerationConfig(temperature=0.5, max_tokens=300)
+    agent = AIAgent(tools=tools,client=client,config=config, model="amazon.nova-lite-v1:0",)  
 
     try:
         session = ChatSession(agent=agent, budget=budget)
         agent_respone = await session.chat(
-            client=client,
             user_text="Can you get me the weather at Trivandrum?",
-            config=config,
-            model="amazon.nova-lite-v1:0",
+           
         )
         print(agent_respone)
 

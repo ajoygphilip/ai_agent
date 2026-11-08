@@ -16,19 +16,13 @@ class ChatSession:
     async def chat(
         self,
         user_text: str,
-        client: LLMClient,
-        model: str,
-        config: GenerationConfig | None = None,
     ) -> str:
         user_msg = Message(role=ChatRole.USER, content=user_text)
         event = Event(author="user",contents=[user_msg])
         self.events.append(event)
         result: AgentResult = await self.agent.run(
-            client=client,
             events=self.events,
             budget=self.budget,
-            config=config,
-            model=model,
         )
         assistant_msg = result.response.to_message()
         self.events.append(Event(author="agent",contents=[assistant_msg]))
