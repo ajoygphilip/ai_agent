@@ -18,7 +18,6 @@ from app.ai.llm.tools import tool
 @tool
 def get_weather(location: str, unit: str = "celsius") -> dict:
     """Return mock weather data for a location."""
-    print("fetching weather")
     return {
         "location": location,
         "temperature": 28,
