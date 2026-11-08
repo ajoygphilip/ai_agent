@@ -13,8 +13,8 @@ class LLMTracer:
             in_tokens = 0
             out_tokens = 0
             if resp.usage:
-                in_tokens = in_tokens
-                out_tokens = out_tokens
+                in_tokens = resp.usage.input_tokens
+                out_tokens = resp.usage.output_tokens
 
             rec.update(
                 model=resp.model,
