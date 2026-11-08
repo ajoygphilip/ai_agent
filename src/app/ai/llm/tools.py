@@ -3,7 +3,7 @@ import inspect
 from typing import Callable, Any
 from abc import ABC, abstractmethod
 import inspect
-from app.ai.llm.exceptions import ToolCallException
+from app.ai.exceptions import ToolCallException
 
 
 class BaseTool(ABC):
@@ -64,7 +64,9 @@ class FunctionTool(BaseTool):
         try:
             signature = inspect.signature(func)
         except Exception as e:
-            raise ValueError(f"Unable to inspect signature for '{func.__name__}': {e}") from e
+            raise ValueError(
+                f"Unable to inspect signature for '{func.__name__}': {e}"
+            ) from e
 
         params = {}
         required = []

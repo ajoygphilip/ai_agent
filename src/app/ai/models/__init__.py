@@ -51,7 +51,7 @@ class Message(BaseModel):
     tool_results: list[ToolResult] = Field(default_factory=list)
 
 
-class Request(BaseModel):
+class LLMRequest(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     messages: list[Message]
     model: str
@@ -59,7 +59,7 @@ class Request(BaseModel):
     config: GenerationConfig | None = None
 
 
-class Response(BaseModel):
+class LLMResponse(BaseModel):
     text: str
     model: str
     provider: str
@@ -76,4 +76,4 @@ class Response(BaseModel):
 
 
 class LLMClient(Protocol):
-    async def generate(self, request: Request) -> Response: ...
+    async def generate(self, request: LLMRequest) -> LLMResponse: ...

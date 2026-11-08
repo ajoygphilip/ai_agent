@@ -12,16 +12,16 @@ from botocore.exceptions import (
     EndpointConnectionError,
 )
 from botocore.config import Config
-from ...models import (
+from ....models import (
     Message,
-    Request,
-    Response,
+    LLMRequest,
+    LLMResponse,
     ChatRole,
     GenerationConfig,
     Usage,
     ToolCall,
 )
-from ...exceptions import *
+from app.ai.exceptions import *
 
 RETRYABLE = {
     "InternalServerException",
@@ -116,8 +116,8 @@ class BedrockClient:
         mapping = {"temperature": config.temperature, "maxTokens": config.max_tokens}
         return {k: v for k, v in mapping.items() if v is not None}
 
-    def _to_provider_tools(self, request: Request) -> dict | None:
-        if not request.tools:
+    def _to_provider_tools(self, LLMRequest: LLMRequest) -> dict | None:
+        if not LLMRequest.tools:
             return None
 
         ret = {
@@ -129,14 +129,14 @@ class BedrockClient:
                         "inputSchema": {"json": tool.input_schema},
                     }
                 }
-                for tool in request.tools
+                for tool in LLMRequest.tools
             ]
         }
         return ret
 
-    def _to_chat_response(self, raw_response: dict, model: str) -> Response:
-        # print(raw_response)
-        blocks = raw_response["output"]["message"]["content"]
+    def _to_chat_response(self, raw_LLMResponse: dict, model: str) -> LLMResponse:
+        # print(raw_LLMResponse)
+        blocks = raw_LLMResponse["output"]["message"]["content"]
 
         text = ""
         tool_calls = []
@@ -155,23 +155,23 @@ class BedrockClient:
                 )
 
         usage = None
-        raw = raw_response.get("usage")
+        raw = raw_LLMResponse.get("usage")
         if raw:
             usage = Usage(
                 input_tokens=raw.get("inputTokens", 0),
                 output_tokens=raw.get("outputTokens", 0),
             )
 
-        return Response(
+        return LLMResponse(
             text=text,
             model=model,
             provider=self.provider,
             usage=usage,
-            finish_reason=raw_response.get("stopReason"),
+            finish_reason=raw_LLMResponse.get("stopReason"),
             tool_calls=tool_calls,
         )
 
-    async def generate(self, request: Request) -> Response:
+    async def generate(self, request: LLMRequest) -> LLMResponse:
         # print("from client generate",request,sep="\n")
         system, messages = self._to_provider_messages(request.messages)
         tool_config = self._to_provider_tools(request)

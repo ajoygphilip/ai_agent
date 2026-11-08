@@ -1,12 +1,12 @@
-from app.ai.agent.models import AgentResult, Budget
+from app.ai.agent.models import AgentResult, Budget,Event
 from app.ai.agent.tool_executioner import ToolExecutor
-from app.ai.llm.models import (
-    ChatMessage,
+from app.ai.models import (
+    Message,
     ChatRole,
     GenerationConfig,
     LLMClient,
-    Request,
-    Response,
+    LLMRequest,
+    LLMResponse,ToolCall,ToolResult,
     Tool,
     Usage,
 )
@@ -17,20 +17,22 @@ import time
 
 
 class AIAgent:
+    name = "general_agent"
+
     def __init__(self, tools: list[Tool] | None = None):
         self.executor = ToolExecutor(tools or [])
 
     async def run(
         self,
         client: LLMClient,
-        messages: list[ChatMessage] | None,
+        events: list[Event] | None,
         budget: Budget,
-        model:str,
+        model: str,
         config: GenerationConfig | None,
         max_turns: int = 5,
     ) -> AgentResult:
         start_time = time.monotonic()
-        messages = messages or []
+        events = events or []
         total_usage = Usage()
 
         for step in range(1, max_turns + 1):
@@ -41,7 +43,7 @@ class AIAgent:
 
             async with asyncio.timeout(remaining_time):
                 request = self._build_llm_request(
-                    messages, self.executor.tools, config=config,model=model
+                    self.events_to_messages(events), self.executor.tools, config=config, model=model
                 )
                 response = await self._think(request, client)
 
@@ -59,10 +61,10 @@ class AIAgent:
                     total_usage=total_usage,
                 )
 
-            messages.append(response.to_message())
+            events.append(Event(author="agent",contents=[response.to_message()]))
             tool_results = await self._act(response)
-            messages.append(
-                ChatMessage(role=ChatRole.TOOL, tool_results=list(tool_results))
+            events.append(
+               Event(author="agent",contents= [Message(role=ChatRole.TOOL, tool_results=list(tool_results))])
             )
 
         raise RuntimeError(f"Exceeded {max_turns} tool-use turns")
@@ -73,18 +75,28 @@ class AIAgent:
         )
         return results
 
-    async def _think(self, request: Request, client: LLMClient) -> Response:
+    async def _think(self, request: LLMRequest, client: LLMClient) -> LLMResponse:
         return await client.generate(request)
+
+    def events_to_messages(self,events:list[Event]) -> list[Message]:
+        messages = []
+        for event in events:
+            for content in event.contents:
+                if isinstance(content, Message):
+                    messages.append(content)
+                elif isinstance(content, ToolResult):
+                    messages.append(Message(role=ChatRole.TOOL, tool_results=[content]))
+                elif isinstance(content, ToolCall):
+                    messages.append(Message(role=ChatRole.ASSISTANT, tool_calls=[content]))
+        return messages
 
     @classmethod
     def _build_llm_request(
         cls,
-        messages: list[ChatMessage],
+        messages: list[Message],
         tools: list[Tool],
-        model:str,
+        model: str,
         config: GenerationConfig | None,
-    ) -> Request:
-        request = Request(
-            model=model, messages=messages, tools=tools, config=config
-        )
+    ) -> LLMRequest:
+        request = LLMRequest(model=model, messages=messages, tools=tools, config=config)
         return request

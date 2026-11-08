@@ -1,6 +1,6 @@
-from app.ai.llm.models import ToolCall, ToolResult
-from app.ai.llm.tools import FunctionTool as Tool
-from app.ai.llm.exceptions import ToolCallException
+from app.ai.models import ToolCall, ToolResult
+from app.ai.llm.tools import BaseTool as Tool
+from app.ai.exceptions import ToolCallException
 import inspect
 import json
 
@@ -29,34 +29,16 @@ class ToolExecutor:
                 is_error=True,
             )
         try:
-            print(tool)
             res = await tool(**call.arguments)
-            print("res", res)
             output = res if isinstance(res, str) else json.dumps(res)
-        except ToolCallException as e:
-            err = e
-
+            return ToolResult(
+                name=call.name, tool_call_id=call.tool_call_id, output=output
+            )
         except Exception as e:
             err = e
-
-        finally:
-            if output:
-                return ToolResult(
-                    name=call.name, tool_call_id=call.tool_call_id, output=output
-                )
-
-            elif err:
-                return ToolResult(
-                    name=call.name,
-                    tool_call_id=call.tool_call_id,
-                    output=f"{type(err).__name__}: {err}",
-                    is_error=True,
-                )
-
-            else:
-                return ToolResult(
-                    name=call.name,
-                    tool_call_id=call.tool_call_id,
-                    output=f"{type(err).__name__}: {err}",
-                    is_error=True,
-                )
+            return ToolResult(
+                name=call.name,
+                tool_call_id=call.tool_call_id,
+                output=f"{type(err).__name__}: {err}",
+                is_error=True,
+            )

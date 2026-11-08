@@ -1,13 +1,13 @@
 from app.observability import span
 
-from .models import LLMClient, Request, Response
+from ..models import LLMClient, LLMRequest, LLMResponse
 
 
 class LLMTracer:
     def __init__(self, inner: LLMClient, name: str = "llm.complete"):
         self.inner, self.name = inner, name
 
-    async def generate(self, request: Request, **kw) -> Response:
+    async def generate(self, request: LLMRequest, **kw) -> LLMResponse:
         async with span(self.name, n_messages=len(request.messages)) as rec:  # pyright: ignore[reportCallIssue]
             resp = await self.inner.generate(request, **kw)
             in_tokens = 0
