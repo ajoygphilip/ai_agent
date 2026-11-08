@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import inspect
 from app.ai.exceptions import ToolCallException
 from app.ai.models import ToolSpec
-
+from pydantic import create_model
 
 class BaseTool(ABC):
     def __init__(
@@ -64,42 +64,17 @@ class FunctionTool(BaseTool):
 
     @staticmethod
     def get_function_schema(func) -> dict:
-        type_map = {
-            str: "string",
-            int: "integer",
-            float: "number",
-            bool: "boolean",
-            list: "array",
-            dict: "object",
-            type(None): "null",
+        sig = inspect.signature(func)
+        fields = {
+            param.name: (
+                param.annotation if param.annotation != inspect._empty else Any,
+                param.default if param.default != inspect._empty else ...,
+            )
+            for param in sig.parameters.values()
         }
-        try:
-            signature = inspect.signature(func)
-        except Exception as e:
-            raise ValueError(
-                f"Unable to inspect signature for '{func.__name__}': {e}"
-            ) from e
-
-        params = {}
-        required = []
-        for param in signature.parameters.values():
-            try:
-                param_type = type_map[param.annotation]
-                params[param.name] = {"type": param_type}
-
-                if param.default == inspect._empty:
-                    required.append(param.name)
-
-            except KeyError as e:
-                raise KeyError(
-                    f"Unsupported type annotation {param.annotation} for param {param.name}"
-                ) from e
-        return {
-            "type": "object",
-            "properties": params,
-            "required": required,
-        }
-
+        model = create_model(f"{func.__name__}_args", **fields)  # type: ignore
+        return model.model_json_schema()
+    
     @classmethod
     def function_to_tool(cls, func) -> dict:
         return {
