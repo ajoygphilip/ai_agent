@@ -27,6 +27,7 @@ class BaseTool(ABC):
         try:
             return await self.execute(*args, **kwargs)
         except Exception as e:
+            print(e)
             raise ToolCallException(str(e)) from e
 
     @property
@@ -101,7 +102,7 @@ class FunctionTool(BaseTool):
                 "description": func.__doc__ or "",
                 "input_schema": model.model_json_schema(), # type: ignore
                 "handler": func,
-                "validator":model,
+                "model":model,
             },
         }
 
