@@ -16,14 +16,12 @@ class ChatSession:
     async def chat(
         self,
         user_text: str,
-    ) -> str:
+    ):
         user_msg = Message(role=ChatRole.USER, content=user_text)
-        event = Event(author="user",contents=[user_msg])
+        event = Event(author="user", contents=[user_msg])
         self.events.append(event)
         result: AgentResult = await self.agent.run(
-            events=self.events,
+            events=self.events.copy(),
             budget=self.budget,
         )
-        assistant_msg = result.response.to_message()
-        self.events.append(Event(author="agent",contents=[assistant_msg]))
-        return result.response.text
+        self.events.extend(result.events)

@@ -21,16 +21,6 @@ class Budget(BaseModel):
     timeout_seconds: float = 60.0
 
 
-class AgentResult(BaseModel):
-    response: LLMResponse
-    total_steps: int
-    total_usage: Usage = Field(default_factory=Usage)
-
-
-class BaseAgent:
-    async def run(self, request: LLMRequest, max_turns: int = 5) -> AgentResult: ...
-
-
 ContentItem = Union[Message, ToolCall, ToolResult]
 
 
@@ -42,3 +32,10 @@ class Event(BaseModel):
     timestamp: float = Field(default_factory=lambda: datetime.now().timestamp())
     author: str
     contents: List[ContentItem] = Field(default_factory=list)
+
+
+class AgentResult(BaseModel):
+    response: LLMResponse
+    total_steps: int
+    total_usage: Usage = Field(default_factory=Usage)
+    events: List[Event]

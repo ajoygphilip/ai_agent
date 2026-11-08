@@ -1,4 +1,4 @@
-from app.ai.agent.models import AgentResult, Budget,Event
+from app.ai.agent.models import AgentResult, Budget, Event
 from app.ai.agent.tool_executioner import ToolExecutor
 from app.ai.models import (
     Message,
@@ -6,7 +6,9 @@ from app.ai.models import (
     GenerationConfig,
     LLMClient,
     LLMRequest,
-    LLMResponse,ToolCall,ToolResult,
+    LLMResponse,
+    ToolCall,
+    ToolResult,
     Tool,
     Usage,
 )
@@ -19,12 +21,18 @@ import time
 class AIAgent:
     name = "general_agent"
 
-    def __init__(self, client: LLMClient,model: str,tools: list[Tool] | None = None,config: GenerationConfig | None = None):
-        self.client= client
+    def __init__(
+        self,
+        client: LLMClient,
+        model: str,
+        tools: list[Tool] | None = None,
+        config: GenerationConfig | None = None,
+    ):
+        self.client = client
         self.executor = ToolExecutor(tools or [])
         self.tools = tools
-        self.model= model
-        self.config=config
+        self.model = model
+        self.config = config
 
     async def run(
         self,
@@ -35,6 +43,7 @@ class AIAgent:
         start_time = time.monotonic()
         events = events or []
         total_usage = Usage()
+        new_events: list[Event] = []
 
         for step in range(1, max_turns + 1):
             elapsed = time.monotonic() - start_time
@@ -44,7 +53,10 @@ class AIAgent:
 
             async with asyncio.timeout(remaining_time):
                 request = self._build_llm_request(
-                    self.events_to_messages(events), self.executor.tools, config=self.config, model=self.model
+                    self.events_to_messages(events),
+                    self.executor.tools,
+                    config=self.config,
+                    model=self.model,
                 )
                 response = await self._think(request, self.client)
 
@@ -55,18 +67,33 @@ class AIAgent:
                 ) > budget.max_tokens:
                     raise RuntimeError("Agent exceeded token budget.")
 
-            if not response.tool_calls:
+            if response.tool_calls:
+                print("running tool calll")
+                tool_call_event = Event(
+                    author="agent", contents=[response.to_message()]
+                )
+                new_events.append(tool_call_event)
+                events.append(tool_call_event)
+
+                tool_results = await self._act(response)
+                event = Event(
+                    author="tool",
+                    contents=[
+                        Message(role=ChatRole.TOOL, tool_results=list(tool_results))
+                    ],
+                )
+                events.append(event)
+                new_events.append(event)
+            else:
+                new_events.append(
+                    Event(author="agent", contents=[response.to_message()])
+                )
                 return AgentResult(
                     response=response,
                     total_steps=step,
                     total_usage=total_usage,
+                    events=new_events,
                 )
-
-            events.append(Event(author="agent",contents=[response.to_message()]))
-            tool_results = await self._act(response)
-            events.append(
-               Event(author="agent",contents= [Message(role=ChatRole.TOOL, tool_results=list(tool_results))])
-            )
 
         raise RuntimeError(f"Exceeded {max_turns} tool-use turns")
 
@@ -79,7 +106,7 @@ class AIAgent:
     async def _think(self, request: LLMRequest, client: LLMClient) -> LLMResponse:
         return await client.generate(request)
 
-    def events_to_messages(self,events:list[Event]) -> list[Message]:
+    def events_to_messages(self, events: list[Event]) -> list[Message]:
         messages = []
         for event in events:
             for content in event.contents:
@@ -88,7 +115,9 @@ class AIAgent:
                 elif isinstance(content, ToolResult):
                     messages.append(Message(role=ChatRole.TOOL, tool_results=[content]))
                 elif isinstance(content, ToolCall):
-                    messages.append(Message(role=ChatRole.ASSISTANT, tool_calls=[content]))
+                    messages.append(
+                        Message(role=ChatRole.ASSISTANT, tool_calls=[content])
+                    )
         return messages
 
     @classmethod
