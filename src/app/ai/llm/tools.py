@@ -63,8 +63,8 @@ class FunctionTool(BaseTool):
     async def execute(self, *args, **kwargs) -> Any:
         try:
             if self.model:
-                input = self.model(**kwargs).model_dump()
-                result = self.handler(**input)
+                validated_kwargs = self.model(**kwargs).model_dump()
+                result = self.handler(**validated_kwargs)
             else:
                 result = self.handler(**kwargs)
 
