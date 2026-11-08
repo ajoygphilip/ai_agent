@@ -9,9 +9,9 @@ from app.ai.models import (
     LLMResponse,
     ToolCall,
     ToolResult,
-    Tool,
     Usage,
 )
+from app.ai.llm.tools import BaseTool as Tool
 
 
 import asyncio
@@ -29,8 +29,8 @@ class AIAgent:
         config: GenerationConfig | None = None,
     ):
         self.client = client
-        self.executor = ToolExecutor(tools or [])
-        self.tools = tools
+        self.tools = tools or []
+        self.executor = ToolExecutor(self.tools)
         self.model = model
         self.config = config
 
@@ -120,6 +120,10 @@ class AIAgent:
                     )
         return messages
 
+
+    def _tools_to_spec(self):
+        return [tool.spec for tool in self.tools]
+    
     @classmethod
     def _build_llm_request(
         cls,
@@ -128,5 +132,5 @@ class AIAgent:
         model: str,
         config: GenerationConfig | None,
     ) -> LLMRequest:
-        request = LLMRequest(model=model, messages=messages, tools=tools, config=config)
+        request = LLMRequest(model=model, messages=messages, tools=Tool.tools_to_spec(tools), config=config)
         return request

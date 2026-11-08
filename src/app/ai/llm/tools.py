@@ -4,6 +4,7 @@ from typing import Callable, Any
 from abc import ABC, abstractmethod
 import inspect
 from app.ai.exceptions import ToolCallException
+from app.ai.models import ToolSpec
 
 
 class BaseTool(ABC):
@@ -41,6 +42,17 @@ class BaseTool(ABC):
     def input_schema(self):
         return self._input_schema
 
+    @property
+    def spec(self)-> ToolSpec:
+        return ToolSpec(
+            name=self.name,
+            description=self.description,
+            input_schema=self.input_schema or {},
+        )
+
+    @classmethod
+    def tools_to_spec(cls,tools:list[BaseTool])->list[ToolSpec]:
+        return [t.spec for t in tools]
 
 class FunctionTool(BaseTool):
     async def execute(self, *args, **kwargs) -> Any:

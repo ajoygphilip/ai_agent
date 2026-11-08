@@ -2,8 +2,6 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any, AsyncIterator, Callable, Literal, Protocol
 from pydantic import BaseModel, Field, ConfigDict
-from app.ai.llm.tools import BaseTool as Tool
-
 
 class ChatRole(StrEnum):
     SYSTEM = "system"
@@ -30,6 +28,10 @@ class GenerationConfig(BaseModel):
     temperature: float | None = None
     max_tokens: int | None = None
 
+class ToolSpec(BaseModel):
+    name: str
+    description: str = ""
+    input_schema: dict[str, Any] = Field(default_factory=dict)
 
 class ToolCall(BaseModel):
     name: str
@@ -55,7 +57,7 @@ class LLMRequest(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     messages: list[Message]
     model: str
-    tools: list[Tool] = Field(default_factory=list)
+    tools: list[ToolSpec] = Field(default_factory=list)
     config: GenerationConfig | None = None
 
 
