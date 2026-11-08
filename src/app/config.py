@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     AWS_ACCESS_KEY_ID: str | None = None
     AWS_SECRET_ACCESS_KEY: str | None = None
+    TAVILY_API_KEY: str | None = None
 
     bedrock_default_model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
 
