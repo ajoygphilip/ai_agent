@@ -11,5 +11,8 @@ def provider_factory(provider: str) -> LLMClient:
             from app.ai.llm.providers.bedrock import BedrockClient
 
             return BedrockClient.from_settings(settings)
+        case "mock":
+            from app.ai.llm.providers.mock import MockLLMClient
+            return MockLLMClient()
         case _:
             raise InvalidLLMProviderException(f"Unknown provider: {provider}")
