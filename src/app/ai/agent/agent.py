@@ -53,7 +53,7 @@ class AIAgent:
 
             async with asyncio.timeout(remaining_time):
                 request = self._build_llm_request(
-                    self.events_to_messages(events),
+                    self.process_events(events),
                     self.executor.tools,
                     config=self.config,
                     model=self.model,
@@ -106,19 +106,19 @@ class AIAgent:
     async def _think(self, request: LLMRequest, client: LLMClient) -> LLMResponse:
         return await client.generate(request)
 
-    def events_to_messages(self, events: list[Event]) -> list[Message]:
-        messages = []
+    def process_events(self, events: list[Event]) -> list[Message]:
+        ret = []
         for event in events:
             for content in event.contents:
                 if isinstance(content, Message):
-                    messages.append(content)
+                    ret.append(content)
                 elif isinstance(content, ToolResult):
-                    messages.append(Message(role=ChatRole.TOOL, tool_results=[content]))
+                    ret.append(Message(role=ChatRole.TOOL, tool_results=[content]))
                 elif isinstance(content, ToolCall):
-                    messages.append(
+                    ret.append(
                         Message(role=ChatRole.ASSISTANT, tool_calls=[content])
                     )
-        return messages
+        return ret
 
 
     def _tools_to_spec(self):
