@@ -12,7 +12,7 @@ from app.ai.models import (
     Usage,
 )
 from app.ai.llm.tools import BaseTool as Tool
-
+from typing import Callable
 
 import asyncio
 import time
@@ -20,6 +20,7 @@ import time
 
 class AIAgent:
     name = "general_agent"
+    prompt = "You are a useful agent"
 
     def __init__(
         self,
@@ -27,12 +28,14 @@ class AIAgent:
         model: str,
         tools: list[Tool] | None = None,
         config: GenerationConfig | None = None,
+        instructions: str | Callable[[], str] | None = None,
     ):
         self.client = client
         self.tools = tools or []
         self.executor = ToolExecutor(self.tools)
         self.model = model
         self.config = config
+        self.instructions = instructions
 
     async def run(
         self,
@@ -56,14 +59,13 @@ class AIAgent:
                     self.executor.tools,
                     config=self.config,
                     model=self.model,
+                    system_prompt=self.get_instructions(),
                 )
                 response = await self._think(request, self.client)
 
             if response.usage:
                 usage += response.usage
-                if (
-                    usage.input_tokens + usage.output_tokens
-                ) > budget.max_tokens:
+                if (usage.input_tokens + usage.output_tokens) > budget.max_tokens:
                     raise RuntimeError("Agent exceeded token budget.")
 
             if response.tool_calls:
@@ -113,15 +115,18 @@ class AIAgent:
                 elif isinstance(content, ToolResult):
                     ret.append(Message(role=ChatRole.TOOL, tool_results=[content]))
                 elif isinstance(content, ToolCall):
-                    ret.append(
-                        Message(role=ChatRole.ASSISTANT, tool_calls=[content])
-                    )
+                    ret.append(Message(role=ChatRole.ASSISTANT, tool_calls=[content]))
         return ret
-
 
     def _tools_to_spec(self):
         return [tool.spec for tool in self.tools]
-    
+
+    def get_instructions(self) -> str | None:
+        """Resolve instructions dynamically if callable, or return static string."""
+        if callable(self.instructions):
+            return self.instructions()
+        return self.instructions or self.prompt
+
     @classmethod
     def _build_llm_request(
         cls,
@@ -129,6 +134,20 @@ class AIAgent:
         tools: list[Tool],
         model: str,
         config: GenerationConfig | None,
+        system_prompt: str | None = None,
     ) -> LLMRequest:
-        request = LLMRequest(model=model, messages=messages, tools=Tool.tools_to_spec(tools), config=config)
+
+        payload_messages = []
+        if system_prompt:
+            payload_messages.append(
+                Message(role=ChatRole.SYSTEM, content=system_prompt)
+            )
+
+        payload_messages.extend(messages)
+        request = LLMRequest(
+            model=model,
+            messages=payload_messages,
+            tools=Tool.tools_to_spec(tools),
+            config=config,
+        )
         return request
