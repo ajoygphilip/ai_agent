@@ -6,6 +6,7 @@ from app.ai.models import (
     ToolCall,
     ToolResult,
     Message,
+    ChatRole,
 )
 from app.ai.llm.observability import LLMTracer
 from typing import Any, Protocol
@@ -32,6 +33,17 @@ class Event(BaseModel):
     timestamp: float = Field(default_factory=lambda: datetime.now().timestamp())
     author: str
     contents: List[ContentItem] = Field(default_factory=list)
+
+    def has_final_response(self) -> bool:
+        has_tool_calls = any(isinstance(c, ToolCall) for c in self.contents)
+        has_tool_results = any(isinstance(c, ToolResult) for c in self.contents)
+        return not has_tool_calls and not has_tool_results
+
+    def extract_final_result(self) -> str | None:
+        for item in self.contents:
+            if isinstance(item, Message) and item.role == ChatRole.ASSISTANT:
+                return item.content
+        return None
 
 
 class AgentResult(BaseModel):
