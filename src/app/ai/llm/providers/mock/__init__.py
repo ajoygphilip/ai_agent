@@ -1,7 +1,8 @@
-from app.ai.models import LLMResponse,LLMRequest
+from app.ai.models import LLMResponse, LLMRequest
+
 
 class MockLLMClient:
-    def __init__(self, responses: list[LLMResponse]|None=None):
+    def __init__(self, responses: list[LLMResponse] | None = None):
         self.responses = responses or []
         self.calls: list[LLMRequest] = []
 

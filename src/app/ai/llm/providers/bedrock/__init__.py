@@ -76,6 +76,7 @@ class BedrockClient:
 
         for msg in messages:
             if msg.role == ChatRole.SYSTEM:
+                print(msg)
                 system.append({"text": msg.content})
             elif msg.role == ChatRole.TOOL:
                 items.append(

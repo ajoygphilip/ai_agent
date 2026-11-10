@@ -3,6 +3,7 @@ from enum import StrEnum
 from typing import Any, AsyncIterator, Callable, Literal, Protocol
 from pydantic import BaseModel, Field, ConfigDict
 
+
 class ChatRole(StrEnum):
     SYSTEM = "system"
     USER = "user"
@@ -28,10 +29,12 @@ class GenerationConfig(BaseModel):
     temperature: float | None = None
     max_tokens: int | None = None
 
+
 class ToolSpec(BaseModel):
     name: str
     description: str = ""
     input_schema: dict[str, Any] = Field(default_factory=dict)
+
 
 class ToolCall(BaseModel):
     name: str

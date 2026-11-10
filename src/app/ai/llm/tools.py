@@ -5,7 +5,9 @@ from abc import ABC, abstractmethod
 import inspect
 from app.ai.exceptions import ToolCallException
 from app.ai.models import ToolSpec
-from pydantic import create_model,ValidationError,BaseModel
+from pydantic import create_model, ValidationError, BaseModel
+
+
 class BaseTool(ABC):
     def __init__(
         self,
@@ -42,7 +44,7 @@ class BaseTool(ABC):
         return self._input_schema
 
     @property
-    def spec(self)-> ToolSpec:
+    def spec(self) -> ToolSpec:
         return ToolSpec(
             name=self.name,
             description=self.description,
@@ -50,16 +52,22 @@ class BaseTool(ABC):
         )
 
     @classmethod
-    def tools_to_spec(cls,tools:list[BaseTool])->list[ToolSpec]:
+    def tools_to_spec(cls, tools: list[BaseTool]) -> list[ToolSpec]:
         return [t.spec for t in tools]
 
+
 class FunctionTool(BaseTool):
-
-    def __init__(self, handler: Callable[..., Any], name: str, description: str = "", input_schema: dict | None = None,**kwargs) -> None:
+    def __init__(
+        self,
+        handler: Callable[..., Any],
+        name: str,
+        description: str = "",
+        input_schema: dict | None = None,
+        **kwargs,
+    ) -> None:
         super().__init__(handler, name, description, input_schema)
-        self.model:type[BaseModel]|None =kwargs.get("model")
+        self.model: type[BaseModel] | None = kwargs.get("model")
 
-  
     async def execute(self, *args, **kwargs) -> Any:
         try:
             if self.model:
@@ -74,7 +82,6 @@ class FunctionTool(BaseTool):
                 return result
         except ValidationError as e:
             raise ToolCallException(f"Invalid tool arguments: {e.errors()}") from e
-        
 
     @staticmethod
     def get_function_fields(func) -> dict:
@@ -86,9 +93,9 @@ class FunctionTool(BaseTool):
             )
             for param in sig.parameters.values()
         }
-       
+
         return fields
-    
+
     @classmethod
     def function_to_tool(cls, func) -> dict:
         fields = cls.get_function_fields(func)
@@ -99,9 +106,9 @@ class FunctionTool(BaseTool):
             "function": {
                 "name": func.__name__,
                 "description": func.__doc__ or "",
-                "input_schema": model.model_json_schema(), # type: ignore
+                "input_schema": model.model_json_schema(),  # type: ignore
                 "handler": func,
-                "model":model,
+                "model": model,
             },
         }
 
