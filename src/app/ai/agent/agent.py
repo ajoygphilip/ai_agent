@@ -46,7 +46,7 @@ class AIAgent:
         budget: Budget,
     ) -> AgentResult:
         start_time = time.monotonic()
-        events = events or []
+        events =list( events or [])
         usage = Usage()
         new_events: list[Event] = []
 
