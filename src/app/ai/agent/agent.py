@@ -56,15 +56,15 @@ class AIAgent:
             if remaining_time <= 0:
                 raise TimeoutError("Agent exceeded deadline budget.")
 
-            async with asyncio.timeout(remaining_time):
-                request = self._build_llm_request(
-                    self.process_events(events),
-                    self.executor.tools,
-                    config=self.config,
-                    model=self.model,
-                    system_prompt=self.get_instructions(),
-                )
-                response = await self._think(request, self.client)
+            # async with asyncio.timeout(remaining_time):
+            request = self._build_llm_request(
+                self.process_events(events),
+                self.executor.tools,
+                config=self.config,
+                model=self.model,
+                system_prompt=self.get_instructions(),
+            )
+            response = await self._think(request, self.client)
 
             if response.usage:
                 usage += response.usage
