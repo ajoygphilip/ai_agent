@@ -114,12 +114,7 @@ class AIAgent:
         ret = []
         for event in events:
             for content in event.contents:
-                if isinstance(content, Message):
-                    ret.append(content)
-                elif isinstance(content, ToolResult):
-                    ret.append(Message(role=ChatRole.TOOL, tool_results=[content]))
-                elif isinstance(content, ToolCall):
-                    ret.append(Message(role=ChatRole.ASSISTANT, tool_calls=[content]))
+                ret.append(content)
         return ret
 
     def _tools_to_spec(self):

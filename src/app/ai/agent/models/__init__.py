@@ -22,7 +22,6 @@ class Budget(BaseModel):
     timeout_seconds: float = 60.0
 
 
-ContentItem = Union[Message, ToolCall, ToolResult]
 
 
 class Event(BaseModel):
@@ -32,16 +31,16 @@ class Event(BaseModel):
     # execution_id: str
     timestamp: float = Field(default_factory=lambda: datetime.now().timestamp())
     author: str
-    contents: List[ContentItem] = Field(default_factory=list)
+    contents: List[Message] = Field(default_factory=list)
 
     def has_final_response(self) -> bool:
-        has_tool_calls = any(isinstance(c, ToolCall) for c in self.contents)
-        has_tool_results = any(isinstance(c, ToolResult) for c in self.contents)
+        has_tool_calls = any(c.tool_calls for c in self.contents)
+        has_tool_results = any(c.tool_results for c in self.contents)
         return not has_tool_calls and not has_tool_results
 
     def extract_final_result(self) -> str | None:
         for item in self.contents:
-            if isinstance(item, Message) and item.role == ChatRole.ASSISTANT:
+            if item.content is not None and item.role == ChatRole.ASSISTANT:
                 return item.content
         return None
 
