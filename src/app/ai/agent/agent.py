@@ -11,16 +11,16 @@ from app.ai.models import (
     ToolResult,
     Usage,
 )
-from app.ai.llm.tools import BaseTool as Tool
+from app.ai.llm.tools import BaseTool as Tool,tool
 from typing import Callable
 
 import asyncio
 import time
+from pydantic import BaseModel
 
 
 class AIAgent:
-    name = "general_agent"
-    prompt = "You are a useful agent"
+    
 
     def __init__(
         self,
@@ -29,7 +29,11 @@ class AIAgent:
         tools: list[Tool] | None = None,
         config: GenerationConfig | None = None,
         instructions: list[Callable[[],str]|str] | None = None,
+        name:str|None = None,
+        prompt:str|None = None
     ):
+        self.name = name or "general_agent"
+        self.prompt = prompt or "You are a useful agent"
         self.client = client
         self.tools = tools or []
         self.executor = ToolExecutor(self.tools)
@@ -68,6 +72,7 @@ class AIAgent:
                     raise RuntimeError("Agent exceeded token budget.")
 
             if response.tool_calls:
+                print("tool call",response.tool_calls[0].name)
                 tool_call_event = Event(
                     author=self.name, contents=[response.to_message()]
                 )
