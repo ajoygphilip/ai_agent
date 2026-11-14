@@ -28,15 +28,14 @@ class AIAgent:
         model: str,
         tools: list[Tool] | None = None,
         config: GenerationConfig | None = None,
-        instructions: str | Callable[[], str] | None = None,
+        instructions: list[Callable[[],str]|str] | None = None,
     ):
         self.client = client
         self.tools = tools or []
         self.executor = ToolExecutor(self.tools)
         self.model = model
         self.config = config
-        self.instructions = instructions
-
+        self.instructions = instructions or []
     async def run(
         self,
         events: list[Event] | None,
@@ -121,11 +120,12 @@ class AIAgent:
     def _tools_to_spec(self):
         return [tool.spec for tool in self.tools]
 
-    def get_instructions(self) -> str | None:
+    def get_instructions(self) -> list[str] | None:
         """Resolve instructions dynamically if callable, or return static string."""
-        if callable(self.instructions):
-            return self.instructions()
-        return self.instructions or self.prompt
+        if not self.instructions:
+            return [self.prompt]
+        
+        return [i() if callable(i) else i for i in self.instructions]
 
     @classmethod
     def _build_llm_request(
@@ -134,13 +134,13 @@ class AIAgent:
         tools: list[Tool],
         model: str,
         config: GenerationConfig | None,
-        system_prompt: str | None = None,
+        system_prompt: list[str] | None = None,
     ) -> LLMRequest:
 
         payload_messages = []
-        if system_prompt:
+        for prompt in system_prompt or []:
             payload_messages.append(
-                Message(role=ChatRole.SYSTEM, content=system_prompt)
+                Message(role=ChatRole.SYSTEM, content=prompt)
             )
 
         payload_messages.extend(messages)
