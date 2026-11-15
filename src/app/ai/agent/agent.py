@@ -31,11 +31,11 @@ class AIAgent:
         self.name = name or "general_agent"
         self.prompt = prompt or "You are a useful agent"
         self.client = client
-        self.tools = tools or []
+        self.tools = tools if tools is not None else []
         self.executor = ToolExecutor(self.tools)
         self.model = model
         self.config = config
-        self.instructions = instructions or []
+        self.instructions =  instructions if instructions is not None else []
 
     async def run(
         self,
