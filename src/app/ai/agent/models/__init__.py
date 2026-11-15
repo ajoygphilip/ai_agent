@@ -38,8 +38,13 @@ class Event(BaseModel):
 
     def extract_final_result(self) -> str | None:
         for item in self.contents:
-            if item.content is not None and item.role == ChatRole.ASSISTANT:
-                return item.content
+            if item.role == ChatRole.ASSISTANT:
+                if item.content:
+                    return item.content
+                if item.tool_calls:
+                    import json
+
+                    return json.dumps(item.tool_calls[0].arguments, indent=2)
         return None
 
 
@@ -48,3 +53,4 @@ class AgentResult(BaseModel):
     total_steps: int
     total_usage: Usage = Field(default_factory=Usage)
     events: List[Event]
+    structured_output: Any | None = None

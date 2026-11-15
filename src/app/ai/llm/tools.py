@@ -123,3 +123,32 @@ class FunctionTool(BaseTool):
 def tool(func: Callable):
     if func:
         return FunctionTool.from_function(func)
+
+
+class StructuredOutputTool(BaseTool):
+    """Stateless terminal tool used to validate and deliver structured output conforming to a Pydantic schema."""
+
+    def __init__(self, schema: type[BaseModel], name: str = "final_answer") -> None:
+        super().__init__(
+            handler=self._noop,
+            name=name,
+            description=(
+                f"Submit the final response conforming strictly to the {schema.__name__} schema. "
+                "Call this tool when you are ready to provide the final structured answer."
+            ),
+            input_schema=schema.model_json_schema(),
+        )
+        self.schema = schema
+
+    def _noop(self, *args, **kwargs):
+        pass
+
+    async def execute(self, *args, **kwargs) -> Any:
+        try:
+            validated = self.schema.model_validate(kwargs)
+            return validated.model_dump_json()
+        except ValidationError as e:
+            raise ToolCallException(
+                f"Validation error for {self.schema.__name__}: {e}. "
+                "Please correct your fields to strictly match the required schema and call again."
+            ) from e
