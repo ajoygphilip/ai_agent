@@ -22,8 +22,6 @@ class Budget(BaseModel):
     timeout_seconds: float = 60.0
 
 
-
-
 class Event(BaseModel):
     """A recorded occurrence during agent execution."""
 

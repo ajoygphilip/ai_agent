@@ -9,7 +9,7 @@ from app.ai.models import (
     LLMResponse,
     Usage,
 )
-from app.ai.llm.tools import BaseTool as Tool,tool
+from app.ai.llm.tools import BaseTool as Tool, tool
 from typing import Callable
 
 import asyncio
@@ -18,17 +18,15 @@ from pydantic import BaseModel
 
 
 class AIAgent:
-    
-
     def __init__(
         self,
         client: LLMClient,
         model: str,
         tools: list[Tool] | None = None,
         config: GenerationConfig | None = None,
-        instructions: list[Callable[[],str]|str] | None = None,
-        name:str|None = None,
-        prompt:str|None = None
+        instructions: list[Callable[[], str] | str] | None = None,
+        name: str | None = None,
+        prompt: str | None = None,
     ):
         self.name = name or "general_agent"
         self.prompt = prompt or "You are a useful agent"
@@ -38,13 +36,14 @@ class AIAgent:
         self.model = model
         self.config = config
         self.instructions = instructions or []
+
     async def run(
         self,
         events: list[Event] | None,
         budget: Budget,
     ) -> AgentResult:
         start_time = time.monotonic()
-        events =list( events or [])
+        events = list(events or [])
         usage = Usage()
         new_events: list[Event] = []
 
@@ -65,7 +64,7 @@ class AIAgent:
                     raise RuntimeError("Agent exceeded token budget.")
 
             if response.tool_calls:
-                print("tool call",response.tool_calls[0].name)
+                print("tool call", response.tool_calls[0].name)
                 tool_call_event = Event(
                     author=self.name, contents=[response.to_message()]
                 )
@@ -117,18 +116,15 @@ class AIAgent:
         """Resolve instructions dynamically if callable, or return static string."""
         if not self.instructions:
             return [self.prompt]
-        
+
     def _build_llm_request(
         self,
         messages: list[Message],
     ) -> LLMRequest:
-        
 
         payload_messages = []
         for prompt in self.get_instructions() or []:
-            payload_messages.append(
-                Message(role=ChatRole.SYSTEM, content=prompt)
-            )
+            payload_messages.append(Message(role=ChatRole.SYSTEM, content=prompt))
 
         payload_messages.extend(messages)
         request = LLMRequest(
