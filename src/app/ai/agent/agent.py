@@ -57,13 +57,8 @@ class AIAgent:
                 raise TimeoutError("Agent exceeded deadline budget.")
 
             # async with asyncio.timeout(remaining_time):
-            request = self._build_llm_request(
-                self.process_events(events),
-                self.executor.tools,
-                config=self.config,
-                model=self.model,
-                system_prompt=self.get_instructions(),
-            )
+            request = self._build_llm_request(self.process_events(events))
+
             response = await self._think(request, self.client)
 
             if response.usage:
@@ -125,29 +120,23 @@ class AIAgent:
         if not self.instructions:
             return [self.prompt]
         
-        return [i() if callable(i) else i for i in self.instructions]
-
-    @classmethod
     def _build_llm_request(
-        cls,
+        self,
         messages: list[Message],
-        tools: list[Tool],
-        model: str,
-        config: GenerationConfig | None,
-        system_prompt: list[str] | None = None,
     ) -> LLMRequest:
+        
 
         payload_messages = []
-        for prompt in system_prompt or []:
+        for prompt in self.get_instructions() or []:
             payload_messages.append(
                 Message(role=ChatRole.SYSTEM, content=prompt)
             )
 
         payload_messages.extend(messages)
         request = LLMRequest(
-            model=model,
+            model=self.model,
             messages=payload_messages,
-            tools=Tool.tools_to_spec(tools),
-            config=config,
+            tools=Tool.tools_to_spec(self.executor.tools),
+            config=self.config,
         )
         return request
