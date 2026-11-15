@@ -99,11 +99,236 @@ async def test_agent_react_tool_calling_loop():
 @pytest.mark.asyncio
 async def test_tool_argument_validation_failure():
     """Verify that when the LLM provides invalid arguments,
-    FunctionTool catches it and returns a readable validation error."""
+    FunctionTool catches it and raises a readable ToolCallException."""
+    from app.ai.exceptions import ToolCallException
 
     # Missing required argument "amount"
-    result = await calculate_tax(rate=0.05)
+    with pytest.raises(ToolCallException) as exc_info:
+        await calculate_tax(rate=0.05)
 
-    assert isinstance(result, str)
-    assert "Invalid tool arguments" in result
-    assert "amount" in result  # Pydantic notes "amount" is missing
+    assert "Invalid tool arguments" in str(exc_info.value)
+    assert "amount" in str(exc_info.value)  # Pydantic notes "amount" is missing
+
+
+from pydantic import BaseModel
+
+
+class WeatherOutput(BaseModel):
+    city: str
+    temperature: float
+    condition: str
+
+
+@pytest.mark.asyncio
+async def test_agent_structured_output_success():
+    """Verify that agent parses and returns structured output when valid."""
+    mock_client = MockLLMClient(
+        responses=[
+            LLMResponse(
+                text="",
+                model="mock-model",
+                provider="mock",
+                tool_calls=[
+                    ToolCall(
+                        tool_call_id="call_out_1",
+                        name="final_answer",
+                        arguments={
+                            "city": "Paris",
+                            "temperature": 22.5,
+                            "condition": "Sunny",
+                        },
+                    )
+                ],
+                usage=Usage(input_tokens=15, output_tokens=15),
+            )
+        ]
+    )
+
+    agent = AIAgent(
+        client=mock_client,
+        model="mock-model",
+        output_schema=WeatherOutput,
+    )
+    session = ChatSession(agent=agent, budget=Budget())
+    result = await session.chat("Weather in Paris?")
+
+    assert result.structured_output is not None
+    assert isinstance(result.structured_output, WeatherOutput)
+    assert result.structured_output.city == "Paris"
+    assert result.structured_output.temperature == 22.5
+    assert result.structured_output.condition == "Sunny"
+    assert session.steps == 1
+
+
+@pytest.mark.asyncio
+async def test_agent_structured_output_validation_retry():
+    """Verify that when the LLM outputs invalid structured data,
+    the validation error is returned as a tool result and the LLM retries and succeeds."""
+    mock_client = MockLLMClient(
+        responses=[
+            # Step 1: LLM calls final_answer with invalid temperature (string instead of float)
+            LLMResponse(
+                text="",
+                model="mock-model",
+                provider="mock",
+                tool_calls=[
+                    ToolCall(
+                        tool_call_id="call_err_1",
+                        name="final_answer",
+                        arguments={
+                            "city": "London",
+                            "temperature": "not_a_number",
+                            "condition": "Rainy",
+                        },
+                    )
+                ],
+                usage=Usage(input_tokens=10, output_tokens=10),
+            ),
+            # Step 2: LLM receives validation error, fixes arguments and calls final_answer again
+            LLMResponse(
+                text="",
+                model="mock-model",
+                provider="mock",
+                tool_calls=[
+                    ToolCall(
+                        tool_call_id="call_fixed_1",
+                        name="final_answer",
+                        arguments={
+                            "city": "London",
+                            "temperature": 14.0,
+                            "condition": "Rainy",
+                        },
+                    )
+                ],
+                usage=Usage(input_tokens=20, output_tokens=10),
+            ),
+        ]
+    )
+
+    agent = AIAgent(
+        client=mock_client,
+        model="mock-model",
+        output_schema=WeatherOutput,
+    )
+    session = ChatSession(agent=agent, budget=Budget())
+    result = await session.chat("Weather in London?")
+
+    assert session.steps == 2
+    assert result.structured_output is not None
+    assert result.structured_output.temperature == 14.0
+    assert result.structured_output.city == "London"
+
+    # Verify the error was sent back in turn 1
+    second_request = mock_client.calls[1]
+    tool_msg = [m for m in second_request.messages if m.role == ChatRole.TOOL][-1]
+    assert tool_msg.tool_results[0].is_error is True
+    assert "Validation error for WeatherOutput" in tool_msg.tool_results[0].output
+
+
+@pytest.mark.asyncio
+async def test_agent_structured_output_missing_tool_call_retry():
+    """Verify that if the LLM forgets to call the output tool and only responds with text,
+    a reminder is sent back and the LLM retries by calling final_answer."""
+    mock_client = MockLLMClient(
+        responses=[
+            # Step 1: LLM outputs plain text instead of calling final_answer
+            LLMResponse(
+                text="The weather in Rome is 26 degrees and sunny.",
+                model="mock-model",
+                provider="mock",
+                usage=Usage(input_tokens=10, output_tokens=10),
+            ),
+            # Step 2: LLM is reminded and calls final_answer
+            LLMResponse(
+                text="",
+                model="mock-model",
+                provider="mock",
+                tool_calls=[
+                    ToolCall(
+                        tool_call_id="call_rome_1",
+                        name="final_answer",
+                        arguments={
+                            "city": "Rome",
+                            "temperature": 26.0,
+                            "condition": "Sunny",
+                        },
+                    )
+                ],
+                usage=Usage(input_tokens=25, output_tokens=15),
+            ),
+        ]
+    )
+
+    agent = AIAgent(
+        client=mock_client,
+        model="mock-model",
+        output_schema=WeatherOutput,
+    )
+    session = ChatSession(agent=agent, budget=Budget())
+    result = await session.chat("Weather in Rome?")
+
+    assert session.steps == 2
+    assert result.structured_output is not None
+    assert result.structured_output.city == "Rome"
+    assert result.structured_output.temperature == 26.0
+
+
+@pytest.mark.asyncio
+async def test_agent_structured_output_with_intermediate_tools():
+    """Verify that agent can call normal tools first to gather data,
+    and then call final_answer to provide the structured result."""
+    mock_client = MockLLMClient(
+        responses=[
+            # Step 1: LLM calls calculate_tax
+            LLMResponse(
+                text="",
+                model="mock-model",
+                provider="mock",
+                tool_calls=[
+                    ToolCall(
+                        tool_call_id="call_tax_1",
+                        name="calculate_tax",
+                        arguments={"amount": 200.0, "rate": 0.15},
+                    )
+                ],
+                usage=Usage(input_tokens=10, output_tokens=10),
+            ),
+            # Step 2: LLM receives tax output (30.0) and calls final_answer
+            LLMResponse(
+                text="",
+                model="mock-model",
+                provider="mock",
+                tool_calls=[
+                    ToolCall(
+                        tool_call_id="call_out_final",
+                        name="final_answer",
+                        arguments={
+                            "city": "Madrid",
+                            "temperature": 30.0,
+                            "condition": "Hot",
+                        },
+                    )
+                ],
+                usage=Usage(input_tokens=20, output_tokens=10),
+            ),
+        ]
+    )
+
+    agent = AIAgent(
+        client=mock_client,
+        model="mock-model",
+        tools=[calculate_tax],
+        output_schema=WeatherOutput,
+    )
+
+    # Verify tool is completely stateless
+    assert not hasattr(agent.output_tool, "latest_result")
+
+    session = ChatSession(agent=agent, budget=Budget())
+    result = await session.chat("Get weather for Madrid")
+
+    assert session.steps == 2
+    assert result.structured_output is not None
+    assert isinstance(result.structured_output, WeatherOutput)
+    assert result.structured_output.city == "Madrid"
+    assert result.structured_output.temperature == 30.0

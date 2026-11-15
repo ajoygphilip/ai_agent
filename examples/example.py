@@ -10,6 +10,14 @@ from app.ai.agent.session import ChatSession
 
 from app.ai.llm.tools import tool
 from app.config import settings
+from pydantic import BaseModel
+
+
+class WeatherReport(BaseModel):
+    city: str
+    temperature: float
+    condition: str
+    outdoor_friendly: bool
 
 
 @tool
@@ -50,6 +58,7 @@ async def main():
         client=client,
         config=config,
         model="amazon.nova-lite-v1:0",
+        output_schema=WeatherReport,
     )
 
     session = ChatSession(
@@ -72,10 +81,14 @@ async def main():
                 print("Agent stopped.")
                 break
 
-            await session.chat(user_text=user_text)
+            result = await session.chat(user_text=user_text)
 
-            print("\nAgent:")
+            print("\nAgent (Final Result):")
             print(session.events[-1].extract_final_result())
+
+            if result.structured_output:
+                print("\nValidated Structured Output (Pydantic model):")
+                print(repr(result.structured_output))
 
             print("\nUsage:")
             print(session.usage)
