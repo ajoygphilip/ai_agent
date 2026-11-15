@@ -7,8 +7,6 @@ from app.ai.models import (
     LLMClient,
     LLMRequest,
     LLMResponse,
-    ToolCall,
-    ToolResult,
     Usage,
 )
 from app.ai.llm.tools import BaseTool as Tool,tool
