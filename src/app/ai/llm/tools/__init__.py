@@ -6,7 +6,7 @@ import inspect
 from app.ai.exceptions import ToolCallException
 from app.ai.models import ToolSpec
 from pydantic import create_model, ValidationError, BaseModel
-
+import asyncio
 
 class BaseTool(ABC):
     def __init__(
@@ -70,16 +70,18 @@ class FunctionTool(BaseTool):
 
     async def execute(self, *args, **kwargs) -> Any:
         try:
-            if self.model:
-                validated_kwargs = self.model(**kwargs).model_dump()
-                result = self.handler(**validated_kwargs)
-            else:
-                result = self.handler(**kwargs)
 
-            if inspect.isawaitable(result):
-                return await result
+            call_kwargs = (
+                self.model(**kwargs).model_dump() if self.model else kwargs
+            )
+            if self._is_async_handler():
+                result = await self.handler(**call_kwargs)
             else:
-                return result
+                result = await asyncio.to_thread(self.handler, **call_kwargs)
+                if inspect.isawaitable(result):
+                    result = await result
+            return result
+
         except ValidationError as e:
             raise ToolCallException(f"Invalid tool arguments: {e.errors()}") from e
 
@@ -118,6 +120,11 @@ class FunctionTool(BaseTool):
         if not func_def:
             raise RuntimeError("Tool creation failed")
         return cls(**func_def)
+
+    def _is_async_handler(self) -> bool:
+        return inspect.iscoroutinefunction(self.handler) or inspect.iscoroutinefunction(
+            getattr(self.handler, "__call__", None)
+        )
 
 
 def tool(func: Callable):
