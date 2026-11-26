@@ -20,7 +20,7 @@ class ChatSession:
     async def chat(
         self,
         user_text: str,
-    ) -> AgentResult|None:
+    ) -> AgentResult | None:
         user_msg = Message(role=ChatRole.USER, content=user_text)
         event = Event(author="user", contents=[user_msg])
         self.events.append(event)

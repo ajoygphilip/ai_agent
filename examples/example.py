@@ -9,6 +9,7 @@ from app.ai.agent.agent import AIAgent
 from app.ai.agent.session import ChatSession
 
 from app.ai.llm.tools import tool
+from app.ai.llm.tools.library import web_search,calculator
 from app.config import settings
 from pydantic import BaseModel
 
@@ -20,33 +21,12 @@ class WeatherReport(BaseModel):
     outdoor_friendly: bool
 
 
-@tool
-def get_weather(location: str, unit: str = "celsius") -> dict:
-    """Return mock weather data for a location."""
-    return {
-        "location": location,
-        "temperature": 28,
-        "unit": unit,
-        "condition": "partly cloudy",
-    }
-
-
-@tool
-def web_search(query: str):
-    """Search the web for latest details"""
-    print("searching web", query)
-    client = TavilyClient(settings.TAVILY_API_KEY)
-    response = client.search(
-        search_depth="basic", query=query, include_images=False, max_results=10
-    )
-    return response
-
 
 async def main():
     client = LLMTracer(provider_factory("bedrock"))
 
     budget = Budget()
-    tools = [get_weather, web_search]
+    tools = [web_search]
 
     config = GenerationConfig(
         temperature=0.5,

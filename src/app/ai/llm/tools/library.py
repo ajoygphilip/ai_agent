@@ -7,7 +7,7 @@ import asyncio
 @tool
 async def web_search(query: str):
     """Search the web for latest details"""
-    print("searching web", query)
+    # print("searching web", query)
     client = AsyncTavilyClient(settings.TAVILY_API_KEY)
     responses = await asyncio.gather(
         *(client.search(q) for q in [query]),
