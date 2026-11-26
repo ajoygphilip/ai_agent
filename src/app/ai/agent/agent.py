@@ -75,7 +75,7 @@ class AIAgent:
                     raise RuntimeError("Agent exceeded token budget.")
 
             if response.tool_calls:
-                print("tool call", response.tool_calls[0].name)
+                # print("tool call", response.tool_calls[0].name)
                 tool_call_event = Event(
                     author=self.name, contents=[response.to_message()]
                 )
